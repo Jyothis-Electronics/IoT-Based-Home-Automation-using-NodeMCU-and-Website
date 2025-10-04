@@ -1,32 +1,11 @@
-/*
- * Time : 13:31
- * Date : 2024-10-02
- */
-
 #include "config.h"
+#include <Arduino.h>
 
-#if defined(ESP8266)
-// Wifi.h will not work for ESP8266
 #include <ESP8266WiFi.h>
-#elif defined(ESP32)
-// For ESP32
-#include <WiFi.h>
-#endif
 
-#include "battery_monitor.h"
+#include "relay_control.h"
 #include "solar_monitor_server.h"
 #include "wifi_configs.h"
-
-// LCD Display
-#if defined(LCD_DSPLAY)
-#include "LiquidCrystal_I2C.h"
-// LCD Display object
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-#endif
-
-// All the function Definition Will Go here
-
-// Do something about this
 
 WiFiServer server(80);
 
@@ -36,59 +15,36 @@ String header;
 unsigned long currentTime = millis();
 unsigned long previousTime = 0;
 
-// Data struct
-Data new_data;
-
-String led_relayState = "off";
-// Solar Monitor Server Object
-
 SolarMonitorServer Solar_monitor_server;
 
 WiFiConfigs Wifi_configs;
+Relay r1{RELAY_1_PIN, false};
+Relay r2{RELAY_2_PIN, false};
 
-BatteryMonitor Battery_monitor(battery_voltage_pin);
+// Create a Relay Control Object
+RelayControl Relay_Control(&r1, &r2);
 
-// Reconnect if lost connection
-
-void setup() {
-  Serial.begin(9600);
-  // Get static IP
-  new_data.led_relayState = "off";
-  Solar_monitor_server.init_relay();
-#if defined(STATIC_IP)
-  Wifi_configs.get_static_ip();
-#endif
-  Wifi_configs.connect();
-  server.begin();
-
-#if defined(LCD_DSPLAY)
-  // Iniitlize the lcd
-  lcd.init();
-  lcd.clear();
-  lcd.backlight();
-#endif
-}
+RelayStatus relay_status;
+RelayStatus new_data;
 
 void update_reading() {
-  new_data.battery_voltage = Battery_monitor.get_voltage();
+  relay_status.relay_1_state = Relay_Control.getRelay(&r1);
+  relay_status.relay_2_state = Relay_Control.getRelay(&r2);
+  new_data.relay_1_state = relay_status.relay_1_state;
+  new_data.relay_2_state = relay_status.relay_2_state;
+}
+
+void setup() {
+  Serial.begin(BAUD_RATE);
+  Wifi_configs.connect();
+  server.begin();
+  Relay_Control.init();
 }
 
 void loop() {
   update_reading();
-#if defined(LCD_DSPLAY)
-  lcd.setCursor(2, 0);
-  lcd.print(WiFi.localIP());
-#endif
-  WiFiClient client = server.available();
 
-#if defined(LCD_DSPLAY)
-  if (new_data.battery_voltage != Battery_monitor.get_voltage()) {
-    lcd.setCursor(2, 1); // Set cursor to character 2 on line 0
-    lcd.print("Volt = ");
-    lcd.print(new_data.battery_voltage);
-    lcd.print(" V");
-  }
-#endif
+  WiFiClient client = server.available();
 
   if (client) {
     currentTime = millis();
@@ -108,18 +64,20 @@ void loop() {
 #if defined(DEBUG_EVERYTHING)
               Serial.println("Serving Json Response");
 #endif
-              Solar_monitor_server.update_json_response(client, new_data);
+              Solar_monitor_server.update_json_response(client, relay_status);
 
-              if (header.indexOf("GET /data?=on") >= 0) {
-                Serial.println("GPIO D4 on");
-                // header = "GET /data";
-                // digitalWrite(LED_BUILTIN, HIGH);
-                Solar_monitor_server.turn_on_off_relay(0);
-              } else if (header.indexOf("GET /data?=off") >= 0) {
-                Serial.println("GPIO D4 off");
-                // header = "GET /data";
-                // digitalWrite(LED_BUILTIN, LOW);
-                Solar_monitor_server.turn_on_off_relay(1);
+              if (header.indexOf("GET /data?relay1=on") >= 0) {
+                Serial.println("Relay 1 ON");
+                Relay_Control.setRelay(&r1, true);
+              } else if (header.indexOf("GET /data?relay1=off") >= 0) {
+                Serial.println("Relay 1 OFF");
+                Relay_Control.setRelay(&r1, false);
+              } else if (header.indexOf("GET /data?relay2=on") >= 0) {
+                Serial.println("Relay 2 ON");
+                Relay_Control.setRelay(&r2, true);
+              } else if (header.indexOf("GET /data?relay2=off") >= 0) {
+                Serial.println("Relay 2 OFF");
+                Relay_Control.setRelay(&r2, false);
               }
               break;
             } else {
