@@ -1,23 +1,5 @@
-#include "solar_monitor_  client.println("  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;");
-  client.println(
-      "  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);");
-  client.println("  min-height: 100vh;");
-  client.println("  color: #333;");
-  client.println("  display: flex;");
-  client.println("  align-items: center;");
-  client.println("  justify-content: center;");
-  client.println("  padding: 20px;");
-  client.println("}");
-
-  client.println(".container {");
-  client.println("  width: 100%;");
-  client.println("  max-width: 800px;");
-  client.println("  background: rgba(255, 255, 255, 0.95);");
-  client.println("  border-radius: 20px;");
-  client.println("  padding: 30px;");
-  client.println("  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);");
-  client.println("  backdrop-filter: blur(10px);");
-  client.println("}");e "config.h"
+#include "solar_monitor_server.h"
+#include "config.h"
 
 void SolarMonitorServer::send_html_header(WiFiClient &client) {
   client.println("HTTP/1.1 200 OK");
@@ -45,12 +27,15 @@ void SolarMonitorServer::send_modern_css(WiFiClient &client) {
       "  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);");
   client.println("  min-height: 100vh;");
   client.println("  color: #333;");
+  client.println("  display: flex;");
+  client.println("  align-items: center;");
+  client.println("  justify-content: center;");
   client.println("  padding: 20px;");
   client.println("}");
 
   client.println(".container {");
+  client.println("  width: 100%;");
   client.println("  max-width: 800px;");
-  client.println("  margin: 0 auto;");
   client.println("  background: rgba(255, 255, 255, 0.95);");
   client.println("  border-radius: 20px;");
   client.println("  padding: 30px;");
